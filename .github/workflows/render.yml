@@ -7,6 +7,10 @@ on:
         description: 'Telegram Chat ID'
         required: true
         default: '871931831'
+      video_mode:
+        description: 'Which Reels to render (all, a, b)'
+        required: false
+        default: 'all'
       data_json:
         description: 'JSON Content'
         required: true
@@ -32,5 +36,6 @@ jobs:
         env:
           INPUT_JSON: ${{ github.event.inputs.data_json }}
           CHAT_ID: ${{ github.event.inputs.chat_id }}
+          VIDEO_MODE: ${{ github.event.inputs.video_mode }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: node render.js

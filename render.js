@@ -374,84 +374,86 @@ async function sendTelegramVideo(botToken, chatId, videoPath, caption) {
 async function main() {
   const data = JSON.parse(process.env.INPUT_JSON);
   const chatId = process.env.CHAT_ID;
+  const videoMode = (process.env.VIDEO_MODE || "all").toLowerCase();
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const fonts = await loadFonts();
 
-  fs.mkdirSync("/tmp/reels_a", { recursive: true });
-  fs.mkdirSync("/tmp/reels_b", { recursive: true });
+  if (videoMode === "all" || videoMode === "a") {
+    fs.mkdirSync("/tmp/reels_a", { recursive: true });
+    for (let i = 0; i < data.slides.length; i++) {
+      const slide = { ...data.slides[i], slide_num: i + 1 };
+      const tree = buildReelsSlideTree(slide, data.slides.length);
+      await renderTreeToPngFile(tree, fonts, `/tmp/reels_a/slide_${i}.png`);
+    }
 
-  // 1. Render Format A (4 Vertical Slides -> 12s Smooth Crossfade Reels)
-  for (let i = 0; i < data.slides.length; i++) {
-    const slide = { ...data.slides[i], slide_num: i + 1 };
-    const tree = buildReelsSlideTree(slide, data.slides.length);
-    await renderTreeToPngFile(tree, fonts, `/tmp/reels_a/slide_${i}.png`);
-  }
-
-  execSync(
-    `ffmpeg -y ` +
-    `-loop 1 -t 3.4 -i /tmp/reels_a/slide_0.png ` +
-    `-loop 1 -t 3.4 -i /tmp/reels_a/slide_1.png ` +
-    `-loop 1 -t 3.4 -i /tmp/reels_a/slide_2.png ` +
-    `-loop 1 -t 3.4 -i /tmp/reels_a/slide_3.png ` +
-    `-f lavfi -t 12.4 -i anullsrc=channel_layout=stereo:sample_rate=44100 ` +
-    `-filter_complex "` +
-    `[0:v][1:v]xfade=transition=fade:duration=0.4:offset=3.0[v01];` +
-    `[v01][2:v]xfade=transition=fade:duration=0.4:offset=6.0[v02];` +
-    `[v02][3:v]xfade=transition=fade:duration=0.4:offset=9.0,format=yuv420p[vout]" ` +
-    `-map "[vout]" -map 4:a -c:v libx264 -preset fast -crf 20 -r 30 -c:a aac -shortest /tmp/reels_format_A.mp4`,
-    { stdio: "inherit" }
-  );
-
-  // 2. Render Format B (Typewriter Code Animation Reels - 10s)
-  const fullCode = [
-    `// Topik: ${data.topic}`,
-    String(data.slides[1]?.code || "// Masalah umum:"),
-    "",
-    String(data.slides[2]?.code || "// Solusi @draftcoding.id:"),
-    "",
-    "// Butuh Website / Android / UI-UX / Arduino?",
-    "// DM @draftcoding.id sekarang!"
-  ].join("\n");
-
-  const totalTypingFrames = 36;
-  const totalHoldFrames = 14;
-  for (let f = 0; f < totalTypingFrames + totalHoldFrames; f++) {
-    const ratio = Math.min(1, (f + 1) / totalTypingFrames);
-    const charCount = Math.floor(fullCode.length * ratio);
-    const showCursor = f % 2 === 0;
-    const typedSlice = fullCode.slice(0, charCount) + (showCursor ? " █" : "  ");
-    const totalProgress = (f + 1) / (totalTypingFrames + totalHoldFrames);
-    const tree = buildTypewriterTree(
-      data.topic,
-      data.slides[0]?.headline || data.topic,
-      data.slides[2]?.body || data.slides[0]?.body || "",
-      typedSlice,
-      totalProgress
+    execSync(
+      `ffmpeg -y ` +
+      `-loop 1 -t 3.4 -i /tmp/reels_a/slide_0.png ` +
+      `-loop 1 -t 3.4 -i /tmp/reels_a/slide_1.png ` +
+      `-loop 1 -t 3.4 -i /tmp/reels_a/slide_2.png ` +
+      `-loop 1 -t 3.4 -i /tmp/reels_a/slide_3.png ` +
+      `-f lavfi -t 12.4 -i anullsrc=channel_layout=stereo:sample_rate=44100 ` +
+      `-filter_complex "` +
+      `[0:v][1:v]xfade=transition=fade:duration=0.4:offset=3.0[v01];` +
+      `[v01][2:v]xfade=transition=fade:duration=0.4:offset=6.0[v02];` +
+      `[v02][3:v]xfade=transition=fade:duration=0.4:offset=9.0,format=yuv420p[vout]" ` +
+      `-map "[vout]" -map 4:a -c:v libx264 -preset fast -crf 20 -r 30 -c:a aac -shortest /tmp/reels_format_A.mp4`,
+      { stdio: "inherit" }
     );
-    const frameIndex = String(f).padStart(3, "0");
-    await renderTreeToPngFile(tree, fonts, `/tmp/reels_b/frame_${frameIndex}.png`);
+
+    await sendTelegramVideo(
+      botToken,
+      chatId,
+      "/tmp/reels_format_A.mp4",
+      `🎬 REELS FORMAT A (Slide Transition 1080x1920)\nTopik: ${data.topic}`
+    );
   }
 
-  execSync(
-    `ffmpeg -y -framerate 5 -i /tmp/reels_b/frame_%03d.png ` +
-    `-f lavfi -t 10 -i anullsrc=channel_layout=stereo:sample_rate=44100 ` +
-    `-c:v libx264 -preset fast -crf 20 -r 30 -pix_fmt yuv420p -c:a aac -shortest /tmp/reels_format_B.mp4`,
-    { stdio: "inherit" }
-  );
+  if (videoMode === "all" || videoMode === "b") {
+    fs.mkdirSync("/tmp/reels_b", { recursive: true });
+    const fullCode = [
+      `// Topik: ${data.topic}`,
+      String(data.slides[1]?.code || "// Masalah umum:"),
+      "",
+      String(data.slides[2]?.code || "// Solusi @draftcoding.id:"),
+      "",
+      "// Butuh Website / Android / UI-UX / Arduino?",
+      "// DM @draftcoding.id sekarang!"
+    ].join("\n");
 
-  // 3. Send Both Videos to Telegram
-  await sendTelegramVideo(
-    botToken,
-    chatId,
-    "/tmp/reels_format_A.mp4",
-    `🎬 REELS FORMAT A (Slide Transition 1080x1920)\nTopik: ${data.topic}`
-  );
-  await sendTelegramVideo(
-    botToken,
-    chatId,
-    "/tmp/reels_format_B.mp4",
-    `⌨️ REELS FORMAT B (Typewriter Live Code 1080x1920)\nTopik: ${data.topic}`
-  );
+    const totalTypingFrames = 36;
+    const totalHoldFrames = 14;
+    for (let f = 0; f < totalTypingFrames + totalHoldFrames; f++) {
+      const ratio = Math.min(1, (f + 1) / totalTypingFrames);
+      const charCount = Math.floor(fullCode.length * ratio);
+      const showCursor = f % 2 === 0;
+      const typedSlice = fullCode.slice(0, charCount) + (showCursor ? " █" : "  ");
+      const totalProgress = (f + 1) / (totalTypingFrames + totalHoldFrames);
+      const tree = buildTypewriterTree(
+        data.topic,
+        data.slides[0]?.headline || data.topic,
+        data.slides[2]?.body || data.slides[0]?.body || "",
+        typedSlice,
+        totalProgress
+      );
+      const frameIndex = String(f).padStart(3, "0");
+      await renderTreeToPngFile(tree, fonts, `/tmp/reels_b/frame_${frameIndex}.png`);
+    }
+
+    execSync(
+      `ffmpeg -y -framerate 5 -i /tmp/reels_b/frame_%03d.png ` +
+      `-f lavfi -t 10 -i anullsrc=channel_layout=stereo:sample_rate=44100 ` +
+      `-c:v libx264 -preset fast -crf 20 -r 30 -pix_fmt yuv420p -c:a aac -shortest /tmp/reels_format_B.mp4`,
+      { stdio: "inherit" }
+    );
+
+    await sendTelegramVideo(
+      botToken,
+      chatId,
+      "/tmp/reels_format_B.mp4",
+      `⌨️ REELS FORMAT B (Typewriter Live Code 1080x1920)\nTopik: ${data.topic}`
+    );
+  }
 }
 
 main().catch(err => {
