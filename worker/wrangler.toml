@@ -1,0 +1,14 @@
+name = "draftcoding-content-bot"
+account_id = "abbc17e016ed8ea5e70565fce090b5f1"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[ai]
+binding = "AI"
+
+[triggers]
+crons = ["0 1 * * *"]
+
+[vars]
+TELEGRAM_CHAT_ID = "871931831"
