@@ -2,15 +2,20 @@ import fs from "fs";
 import { execSync } from "child_process";
 import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
+import sharp from "sharp";
 
-const h = (type, style, children) => ({ type, props: { style, children } });
+const h = (type, style, children, extraProps = {}) => ({
+  type,
+  props: { style, children, ...extraProps }
+});
 
 async function loadFonts() {
   const [
     interReg, interSemi, interBold,
     spaceMed, spaceBold,
     jakartaMed, jakartaBold, jakartaExtra,
-    monoMed, monoBold
+    monoMed, monoBold,
+    montserratExtraBold, montserratBlack, montserratBlackItalic
   ] = await Promise.all([
     fetch("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-400-normal.woff").then(r => r.arrayBuffer()),
     fetch("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-600-normal.woff").then(r => r.arrayBuffer()),
@@ -21,7 +26,10 @@ async function loadFonts() {
     fetch("https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5.0.8/files/plus-jakarta-sans-latin-700-normal.woff").then(r => r.arrayBuffer()),
     fetch("https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5.0.8/files/plus-jakarta-sans-latin-800-normal.woff").then(r => r.arrayBuffer()),
     fetch("https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.8/files/jetbrains-mono-latin-500-normal.woff").then(r => r.arrayBuffer()),
-    fetch("https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.8/files/jetbrains-mono-latin-700-normal.woff").then(r => r.arrayBuffer())
+    fetch("https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.8/files/jetbrains-mono-latin-700-normal.woff").then(r => r.arrayBuffer()),
+    fetch("https://cdn.jsdelivr.net/npm/@fontsource/montserrat@5.0.8/files/montserrat-latin-800-normal.woff").then(r => r.arrayBuffer()),
+    fetch("https://cdn.jsdelivr.net/npm/@fontsource/montserrat@5.0.8/files/montserrat-latin-900-normal.woff").then(r => r.arrayBuffer()),
+    fetch("https://cdn.jsdelivr.net/npm/@fontsource/montserrat@5.0.8/files/montserrat-latin-900-italic.woff").then(r => r.arrayBuffer())
   ]);
   return [
     { name: "Inter", data: interReg, weight: 400, style: "normal" },
@@ -33,7 +41,10 @@ async function loadFonts() {
     { name: "Plus Jakarta Sans", data: jakartaBold, weight: 700, style: "normal" },
     { name: "Plus Jakarta Sans", data: jakartaExtra, weight: 800, style: "normal" },
     { name: "JetBrains Mono", data: monoMed, weight: 500, style: "normal" },
-    { name: "JetBrains Mono", data: monoBold, weight: 700, style: "normal" }
+    { name: "JetBrains Mono", data: monoBold, weight: 700, style: "normal" },
+    { name: "Montserrat", data: montserratExtraBold, weight: 800, style: "normal" },
+    { name: "Montserrat", data: montserratBlack, weight: 900, style: "normal" },
+    { name: "Montserrat", data: montserratBlackItalic, weight: 900, style: "italic" }
   ];
 }
 
@@ -263,330 +274,162 @@ function renderCodeWindow(codeStr, fileName = "solution.ts", statusLabel = "PROD
   ]);
 }
 
-// Dedicated Animated Cover Thumbnail Frame Builder for Reels (1080x1920) before Slide 1
-function buildReelsThumbnailTree(thumbnail, topic, slides, theme, stepIndex = 5, totalSteps = 6) {
-  const isBrutalist = theme.id === "neo-brutalist" || theme.id === "creative-agency";
-  const stepRatio = Math.min(1, (stepIndex + 1) / 4);
+const VERIFIED_PORTRAITS = [
+  "https://static.vecteezy.com/system/resources/previews/053/717/602/non_2x/surprised-man-with-glasses-expressing-shock-and-awe-in-studio-lighting-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/059/043/188/large_2x/a-man-with-glasses-and-a-checkered-shirt-is-making-a-surprised-face-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/058/175/380/large_2x/surprised-man-wearing-glasses-with-a-vibrant-expression-against-a-neutral-background-portrait-amazed-man-with-3d-glasses-transparent-background-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/050/233/278/non_2x/shocked-man-in-denim-shirt-with-glasses-holding-his-face-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/050/233/255/non_2x/shocked-businessman-in-suit-wearing-glasses-free-png.png"
+];
+
+const VERIFIED_3D_ASSETS = [
+  "https://static.vecteezy.com/system/resources/previews/055/325/636/large_2x/led-light-bulb-isolated-on-a-transparent-background-showcasing-modern-energyefficient-design-and-versatile-applications-led-light-bulb-3d-isolated-on-transparent-background-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/062/676/986/large_2x/3d-light-bulb-icon-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/047/248/235/original/3d-rocket-icon-3d-rocket-symbol-3d-rocket-photo-3d-rocket-design-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/051/442/801/non_2x/a-3d-laptop-isolated-on-a-transparent-background-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/060/415/325/non_2x/beautiful-iconic-ultra-detailed-isolated-cutout-of-a-single-polished-metallic-gear-with-intricate-teeth-and-cogs-professional-render-with-transparent-background-free-png.png",
+  "https://static.vecteezy.com/system/resources/previews/047/827/331/large_2x/isolated-3d-rendering-of-smartphone-against-transparent-background-free-png.png"
+];
+
+async function searchWebFreePng(query) {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3500);
+    const page = await fetch(
+      "https://duckduckgo.com/?q=" + encodeURIComponent(query + " isolated transparent free png") + "&iax=images&ia=images",
+      { headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" }, signal: ctrl.signal }
+    ).then(r => r.text());
+    const vqd = page.match(/vqd=([\d-]+)/)?.[1] || page.match(/vqd="([^"]+)"/)?.[1] || page.match(/vqd='([^']+)'/)?.[1];
+    if (!vqd) {
+      clearTimeout(timer);
+      return null;
+    }
+    const data = await fetch(
+      "https://duckduckgo.com/i.js?l=us-en&o=json&q=" + encodeURIComponent(query + " isolated transparent free png") + "&vqd=" + vqd + "&f=size:Large,,type:transparent,,",
+      { headers: { "User-Agent": "Mozilla/5.0", Referer: "https://duckduckgo.com/" }, signal: ctrl.signal }
+    ).then(r => r.json());
+    clearTimeout(timer);
+    const match = (data.results || []).find(
+      r => r.image && r.image.endsWith("-free-png.png") && r.width >= 800
+    );
+    return match ? match.image : null;
+  } catch {
+    return null;
+  }
+}
+
+async function prepareThumbnailAssets(thumbnail, themeIndex = 0) {
   const thumb = thumbnail || {};
-  const category = String(thumb.category || slides?.[0]?.tag || "TECH INSIGHT").toUpperCase();
-  const badgeText = String(thumb.badge || `EXCLUSIVE CASE STUDY • ${theme.name.toUpperCase()}`);
-  const titleTop = String(thumb.title_top || topic || "BEDAH ARSITEKTUR");
-  const highlightWord = String(thumb.highlight || "SKALA PRODUKSI");
-  const titleBottom = String(thumb.title_bottom || slides?.[0]?.headline || "TANPA DRAMA & BOTTLENECK");
-  const subtitle = String(thumb.subtitle || slides?.[0]?.body || "Panduan praktis engineering & desain dari tim @draftcoding.id");
-  const statValue = String(thumb.stat_value || "99.4%");
-  const statLabel = String(thumb.stat_label || "PRODUCTION SCORE");
-  const metrics = Array.isArray(thumb.visual_metrics) && thumb.visual_metrics.length >= 2
-    ? thumb.visual_metrics.slice(0, 2)
-    : [
-        { label: "Performa & Stabilitas", before: "34%", after: "98%" },
-        { label: "Efisiensi Kode & UI", before: "Lambat", after: "Optimal" }
-      ];
+  const fallbackPortrait = VERIFIED_PORTRAITS[themeIndex % VERIFIED_PORTRAITS.length];
+  const fallbackAsset = VERIFIED_3D_ASSETS[themeIndex % VERIFIED_3D_ASSETS.length];
 
-  const topMasthead = h("div", {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-    borderBottom: `3px solid ${theme.ink}`,
-    paddingBottom: "32px"
-  }, [
-    h("div", { display: "flex", alignItems: "center" }, [
-      h("div", {
-        display: "flex",
-        backgroundColor: theme.ink,
-        color: "#FFFFFF",
-        padding: "12px 24px",
-        borderRadius: "10px",
-        fontFamily: "JetBrains Mono",
-        fontSize: "21px",
-        fontWeight: 700,
-        marginRight: "14px"
-      }, "COVER EDITION"),
-      h("div", {
-        display: "flex",
-        backgroundColor: theme.accentSoft,
-        color: theme.accent,
-        border: `2px solid ${theme.accent}`,
-        padding: "10px 22px",
-        borderRadius: "10px",
-        fontFamily: "JetBrains Mono",
-        fontSize: "21px",
-        fontWeight: 700
-      }, category)
-    ]),
-    h("div", {
-      display: "flex",
-      backgroundColor: theme.secondary,
-      color: theme.secondaryText,
-      border: isBrutalist ? "2px solid #09090B" : "none",
-      boxShadow: isBrutalist ? "4px 4px 0px #09090B" : "none",
-      padding: "10px 24px",
-      borderRadius: "99px",
-      fontFamily: "JetBrains Mono",
-      fontSize: "21px",
-      fontWeight: 700
-    }, "✦ THUMBNAIL // 00")
+  const [searchedAssetUrl, searchedPersonUrl] = await Promise.all([
+    thumb.asset_query ? searchWebFreePng(thumb.asset_query) : Promise.resolve(null),
+    thumb.person_query ? searchWebFreePng(thumb.person_query) : Promise.resolve(null)
   ]);
 
-  const heroSection = h("div", {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    width: "100%",
-    flex: 1,
-    padding: "48px 0px"
-  }, [
-    h("div", { display: "flex", flexDirection: "column", width: "100%" }, [
-      h("div", {
-        display: "flex",
-        alignSelf: "flex-start",
-        backgroundColor: theme.accentSoft,
-        color: theme.accent,
-        padding: "10px 24px",
-        borderRadius: "99px",
-        fontFamily: "JetBrains Mono",
-        fontSize: "21px",
-        fontWeight: 700,
-        marginBottom: "28px"
-      }, `⚡ ${badgeText}`),
-      h("div", {
-        display: "flex",
-        fontFamily: theme.fontDisplay,
-        fontSize: "66px",
-        fontWeight: 800,
-        lineHeight: 1.08,
-        letterSpacing: "-0.03em",
-        color: theme.ink,
-        marginBottom: "18px"
-      }, titleTop.toUpperCase()),
-      h("div", { display: "flex", alignItems: "center", marginBottom: "18px" }, [
-        h("div", {
-          display: "flex",
-          backgroundColor: theme.accent,
-          color: "#FFFFFF",
-          border: isBrutalist ? "3px solid #09090B" : "none",
-          boxShadow: isBrutalist ? "8px 8px 0px #09090B" : "none",
-          padding: "12px 32px",
-          borderRadius: "18px",
-          fontFamily: theme.fontDisplay,
-          fontSize: "70px",
-          fontWeight: 800,
-          lineHeight: 1.08,
-          letterSpacing: "-0.03em",
-          marginRight: "22px"
-        }, highlightWord.toUpperCase()),
-        h("div", {
-          display: "flex",
-          fontFamily: "JetBrains Mono",
-          fontSize: "52px",
-          fontWeight: 700,
-          color: theme.accent
-        }, "↗")
-      ]),
-      h("div", {
-        display: "flex",
-        fontFamily: theme.fontDisplay,
-        fontSize: "58px",
-        fontWeight: 700,
-        lineHeight: 1.14,
-        letterSpacing: "-0.025em",
-        color: theme.ink,
-        marginBottom: "26px"
-      }, titleBottom),
-      h("div", {
-        display: "flex",
-        fontFamily: theme.fontBody,
-        fontSize: "33px",
-        fontWeight: 500,
-        lineHeight: 1.45,
-        color: theme.muted
-      }, subtitle)
-    ]),
+  let personB64 = null;
+  for (const url of [searchedPersonUrl, fallbackPortrait, VERIFIED_PORTRAITS[0]].filter(Boolean)) {
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (!res.ok) continue;
+      const buf = Buffer.from(await res.arrayBuffer());
+      const trimmed = await sharp(buf).trim().toBuffer();
+      const meta = await sharp(trimmed).metadata();
+      const cropH = Math.max(200, Math.round((meta.height || 800) * 0.56));
+      const processed = await sharp(trimmed)
+        .extract({ left: 0, top: 0, width: meta.width || 800, height: cropH })
+        .resize({ width: 760, height: 560, fit: "inside" })
+        .grayscale()
+        .normalise()
+        .linear(1.3, -24)
+        .png()
+        .toBuffer();
+      personB64 = "data:image/png;base64," + processed.toString("base64");
+      break;
+    } catch {
+      continue;
+    }
+  }
 
-    h("div", {
-      display: "flex",
-      flexDirection: "column",
-      backgroundColor: theme.cardBg,
-      border: theme.cardBorder,
-      boxShadow: theme.cardShadow,
-      borderRadius: theme.cardRadius,
-      padding: "42px 44px",
-      width: "100%",
-      boxSizing: "border-box"
-    }, [
-      h("div", {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        borderBottom: "2px solid #E2E8F0",
-        paddingBottom: "22px",
-        marginBottom: "28px",
-        width: "100%"
-      }, [
-        h("div", { display: "flex", alignItems: "center" }, [
-          h("div", { width: "14px", height: "14px", borderRadius: "99px", backgroundColor: "#FB7185", marginRight: "8px" }, ""),
-          h("div", { width: "14px", height: "14px", borderRadius: "99px", backgroundColor: "#FACC15", marginRight: "8px" }, ""),
-          h("div", { width: "14px", height: "14px", borderRadius: "99px", backgroundColor: "#34D399", marginRight: "16px" }, ""),
-          h("div", {
-            display: "flex",
-            fontFamily: "JetBrains Mono",
-            fontSize: "20px",
-            fontWeight: 700,
-            color: theme.ink
-          }, `TOPIC PREVIEW // ${String(topic || "").toUpperCase().slice(0, 26)}`)
-        ]),
-        h("div", {
-          display: "flex",
-          backgroundColor: theme.solBg,
-          color: theme.solColor,
-          padding: "8px 18px",
-          borderRadius: "99px",
-          fontFamily: "JetBrains Mono",
-          fontSize: "18px",
-          fontWeight: 700
-        }, "● VERIFIED")
-      ]),
-      h("div", {
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        marginBottom: "24px"
-      }, metrics.map((m, idx) =>
-        h("div", {
-          display: "flex",
-          flexDirection: "column",
-          backgroundColor: "#FFFFFF",
-          border: "2px solid #E2E8F0",
-          borderRadius: "18px",
-          padding: "22px 26px",
-          marginBottom: idx === 0 ? "16px" : "0px",
-          width: "100%",
-          boxSizing: "border-box"
-        }, [
-          h("div", {
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            width: "100%",
-            marginBottom: "12px"
-          }, [
-            h("div", {
-              display: "flex",
-              fontFamily: theme.fontBody,
-              fontSize: "24px",
-              fontWeight: 700,
-              color: theme.ink
-            }, String(m.label)),
-            h("div", { display: "flex", alignItems: "center" }, [
-              h("div", {
-                display: "flex",
-                backgroundColor: theme.probBg,
-                color: theme.probColor,
-                padding: "6px 14px",
-                borderRadius: "8px",
-                fontFamily: "JetBrains Mono",
-                fontSize: "19px",
-                fontWeight: 700,
-                marginRight: "12px"
-              }, `❌ ${m.before}`),
-              h("div", {
-                display: "flex",
-                backgroundColor: theme.solBg,
-                color: theme.solColor,
-                padding: "6px 14px",
-                borderRadius: "8px",
-                fontFamily: "JetBrains Mono",
-                fontSize: "19px",
-                fontWeight: 700
-              }, `✅ ${m.after}`)
-            ])
-          ]),
-          h("div", {
-            display: "flex",
-            width: "100%",
-            height: "12px",
-            backgroundColor: "#E2E8F0",
-            borderRadius: "99px",
-            overflow: "hidden"
-          }, [
-            h("div", {
-              width: `${Math.round((idx === 0 ? 94 : 88) * stepRatio)}%`,
-              height: "12px",
-              backgroundColor: theme.accent,
-              borderRadius: "99px"
-            }, "")
-          ])
-        ])
-      )),
-      h("div", {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        width: "100%",
-        backgroundColor: theme.codeBg,
-        color: "#FFFFFF",
-        borderRadius: "18px",
-        padding: "24px 32px",
-        boxSizing: "border-box"
-      }, [
-        h("div", {
-          display: "flex",
-          fontFamily: "JetBrains Mono",
-          fontSize: "22px",
-          fontWeight: 700,
-          color: "#94A3B8"
-        }, `BENCHMARK // ${statLabel}`),
-        h("div", {
-          display: "flex",
-          fontFamily: "JetBrains Mono",
-          fontSize: "40px",
-          fontWeight: 700,
-          color: "#34D399"
-        }, statValue)
-      ])
-    ])
-  ]);
+  let assetB64 = null;
+  for (const url of [searchedAssetUrl, fallbackAsset, VERIFIED_3D_ASSETS[0]].filter(Boolean)) {
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (!res.ok) continue;
+      const buf = Buffer.from(await res.arrayBuffer());
+      const trimmed = await sharp(buf).trim().toBuffer();
+      const processed = await sharp(trimmed)
+        .resize({ width: 320, height: 320, fit: "inside" })
+        .grayscale()
+        .normalise()
+        .linear(0.55, -12)
+        .png()
+        .toBuffer();
+      assetB64 = "data:image/png;base64," + processed.toString("base64");
+      break;
+    } catch {
+      continue;
+    }
+  }
 
-  const footer = h("div", {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-    borderTop: "2px solid #E2E8F0",
-    paddingTop: "32px"
+  return { personB64, assetB64 };
+}
+
+// Dedicated Animated Cover Thumbnail Frame Builder for Reels (1080x1920) before Slide 1
+function buildReelsThumbnailTree(thumbnail, topic, slides, theme, stepIndex = 5, totalSteps = 6, assets = {}) {
+  const thumb = thumbnail || {};
+  let rawKicker = String(thumb.kicker || thumb.category || slides?.[0]?.tag || "WEB DEV 101").toUpperCase().trim();
+  if (!rawKicker.endsWith(":")) rawKicker += ":";
+
+  const topicWords = String(topic || "LANGSUNG PAHAM").toUpperCase().replace(/[^A-Z0-9\s?!]/g, "").trim().split(/\s+/);
+  const line1 = String(thumb.line1 || thumb.title_top || topicWords.slice(0, 1).join(" ") || "LANGSUNG").toUpperCase().trim();
+  const line2 = String(thumb.line2 || thumb.highlight || topicWords.slice(1, 2).join(" ") || "PAHAM").toUpperCase().trim();
+
+  const maxLineLen = Math.max(line1.length, line2.length);
+  const mainFontSize = maxLineLen > 12 ? 88 : maxLineLen > 9 ? 108 : maxLineLen > 7 ? 128 : 140;
+  const kickerFontSize = rawKicker.length > 16 ? 76 : rawKicker.length > 13 ? 90 : 104;
+
+  const showLine2 = stepIndex >= 1;
+  const showRays = stepIndex >= 2;
+  const rotDeg = stepIndex % 2 === 0 ? 14 : 18;
+
+  const logoSvg = h("svg", { width: "96px", height: "96px" }, [
+    h("rect", {}, null, { x: "0", y: "0", width: "96", height: "96", rx: "22", fill: "#09090B" }),
+    h("path", {}, null, { d: "M22 20 V72 M15 28 H22 M15 64 H22", stroke: "#FFFFFF", strokeWidth: "6", strokeLinecap: "round" }),
+    h("path", {}, null, { d: "M31 20 H48 C64 20 75 31 75 46 C75 61 64 72 48 72 H31 Z", stroke: "#FFFFFF", strokeWidth: "6.5", fill: "none", strokeLinejoin: "round" }),
+    h("path", {}, null, { d: "M42 32 H48 C56 32 63 38 63 46 C63 54 56 60 48 60 H42 Z", stroke: "#FFFFFF", strokeWidth: "5.5", fill: "none", strokeLinejoin: "round" })
+  ], { viewBox: "0 0 92 92" });
+
+  const exclamationSvg = h("svg", {
+    width: "270px",
+    height: "270px",
+    transform: `rotate(${stepIndex % 2 === 0 ? -28 : -24}deg)`
   }, [
-    h("div", { display: "flex", alignItems: "center" }, [
-      h("div", {
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        width: "60px",
-        height: "60px",
-        borderRadius: "14px",
-        backgroundColor: theme.accent,
-        color: "#FFFFFF",
-        fontFamily: "JetBrains Mono",
-        fontSize: "26px",
-        fontWeight: 700,
-        marginRight: "20px"
-      }, "DC"),
-      h("div", { display: "flex", flexDirection: "column" }, [
-        h("div", { display: "flex", fontFamily: theme.fontDisplay, fontSize: "28px", fontWeight: 700, color: theme.ink }, "@draftcoding.id"),
-        h("div", { display: "flex", fontFamily: "JetBrains Mono", fontSize: "20px", fontWeight: 500, color: theme.muted }, "WEB • ANDROID • UI/UX • ARDUINO")
-      ])
-    ]),
-    h("div", {
-      display: "flex",
-      backgroundColor: theme.accent,
-      color: "#FFFFFF",
-      padding: "14px 28px",
-      borderRadius: "99px",
-      fontFamily: "JetBrains Mono",
-      fontSize: "22px",
-      fontWeight: 700
-    }, "MULAI SLIDE 01 ➔")
-  ]);
+    h("polygon", {}, null, { points: "45,25 78,25 70,155 53,155", fill: "#27272A" }),
+    h("circle", {}, null, { cx: "61", cy: "190", r: "18", fill: "#27272A" }),
+    h("polygon", {}, null, { points: "105,12 142,12 132,155 113,155", fill: "#27272A" }),
+    h("circle", {}, null, { cx: "123", cy: "190", r: "19", fill: "#27272A" }),
+    h("polygon", {}, null, { points: "168,25 202,25 192,155 175,155", fill: "#27272A" }),
+    h("circle", {}, null, { cx: "184", cy: "190", r: "18", fill: "#27272A" })
+  ], { viewBox: "0 0 240 220" });
+
+  const raysSvg = h("svg", {
+    width: "480px",
+    height: "480px",
+    position: "absolute",
+    top: "0px",
+    left: "0px",
+    opacity: showRays ? 1 : 0.35
+  }, [
+    h("rect", {}, null, { x: "52", y: "185", width: "46", height: "18", rx: "9", fill: "#27272A", transform: "rotate(12 75 194)" }),
+    h("rect", {}, null, { x: "78", y: "105", width: "46", height: "18", rx: "9", fill: "#27272A", transform: "rotate(42 101 114)" }),
+    h("rect", {}, null, { x: "148", y: "55", width: "46", height: "18", rx: "9", fill: "#27272A", transform: "rotate(75 171 64)" }),
+    h("rect", {}, null, { x: "235", y: "52", width: "46", height: "18", rx: "9", fill: "#27272A", transform: "rotate(105 258 61)" }),
+    h("rect", {}, null, { x: "308", y: "98", width: "46", height: "18", rx: "9", fill: "#27272A", transform: "rotate(138 331 107)" }),
+    h("rect", {}, null, { x: "338", y: "178", width: "46", height: "18", rx: "9", fill: "#27272A", transform: "rotate(168 361 187)" }),
+    h("rect", {}, null, { x: "322", y: "252", width: "46", height: "18", rx: "9", fill: "#27272A", transform: "rotate(198 345 261)" })
+  ], { viewBox: "0 0 440 440" });
 
   return h("div", {
     width: "1080px",
@@ -594,13 +437,132 @@ function buildReelsThumbnailTree(thumbnail, topic, slides, theme, stepIndex = 5,
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
-    color: theme.ink,
-    fontFamily: theme.fontBody,
-    padding: "115px 72px 125px 72px",
-    border: `12px solid ${theme.canvasGrid}`,
+    backgroundColor: "#F3F4F6",
+    position: "relative",
+    overflow: "hidden",
+    padding: "130px 72px 140px 72px",
     boxSizing: "border-box"
-  }, [topMasthead, heroSection, footer]);
+  }, [
+    h("div", { display: "flex", alignItems: "center" }, [
+      logoSvg,
+      h("div", {
+        display: "flex",
+        fontFamily: "Montserrat",
+        fontWeight: 800,
+        fontSize: "23px",
+        letterSpacing: "0.02em",
+        color: "#09090B",
+        marginLeft: "24px"
+      }, "DRAFTCODING.ID")
+    ]),
+
+    h("div", {
+      display: "flex",
+      flexDirection: "column",
+      marginTop: "110px",
+      marginBottom: "auto"
+    }, [
+      h("div", {
+        display: "flex",
+        fontFamily: "Montserrat",
+        fontWeight: 900,
+        fontStyle: "italic",
+        fontSize: `${kickerFontSize}px`,
+        lineHeight: 1.06,
+        letterSpacing: "-0.03em",
+        color: "#09090B",
+        marginBottom: "14px"
+      }, rawKicker),
+      h("div", {
+        display: "flex",
+        fontFamily: "Montserrat",
+        fontWeight: 900,
+        fontSize: `${mainFontSize}px`,
+        lineHeight: 0.96,
+        letterSpacing: "-0.035em",
+        color: "#09090B"
+      }, line1),
+      h("div", {
+        display: "flex",
+        fontFamily: "Montserrat",
+        fontWeight: 900,
+        fontSize: `${mainFontSize}px`,
+        lineHeight: 0.96,
+        letterSpacing: "-0.035em",
+        color: "#09090B",
+        opacity: showLine2 ? 1 : 0.25
+      }, line2)
+    ]),
+
+    h("div", {
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      position: "absolute",
+      right: "65px",
+      top: "780px",
+      width: "480px",
+      height: "480px"
+    }, [
+      raysSvg,
+      assets.assetB64
+        ? h("img", {
+            width: "265px",
+            height: "265px",
+            objectFit: "contain",
+            marginTop: "60px",
+            transform: `rotate(${rotDeg}deg)`
+          }, null, { src: assets.assetB64 })
+        : h("div", {}, "")
+    ]),
+
+    h("div", {
+      display: "flex",
+      position: "absolute",
+      left: "115px",
+      bottom: "440px"
+    }, [exclamationSvg]),
+
+    h("div", {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: "5px solid #09090B",
+      borderRadius: "999px",
+      padding: "12px 42px",
+      alignSelf: "flex-start",
+      marginBottom: "20px"
+    }, [
+      h("div", {
+        display: "flex",
+        fontFamily: "Montserrat",
+        fontWeight: 900,
+        fontStyle: "italic",
+        fontSize: "44px",
+        letterSpacing: "-0.02em",
+        color: "#09090B"
+      }, "#OSCS")
+    ]),
+
+    h("div", {
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "flex-end",
+      position: "absolute",
+      bottom: "-12px",
+      left: "210px",
+      width: "720px",
+      height: "560px"
+    }, [
+      assets.personB64
+        ? h("img", {
+            width: "700px",
+            height: "540px",
+            objectFit: "contain"
+          }, null, { src: assets.personB64 })
+        : h("div", {}, "")
+    ])
+  ]);
 }
 
 // Animated Frame Builder for Reels Format A (Kinetic Slide Entrance & Micro-Motion)
@@ -1336,9 +1298,10 @@ async function main() {
     // 0. Render Cover Thumbnail Clip first (2.2s at 30fps)
     const thumbDir = "/tmp/reels_a_thumb";
     fs.mkdirSync(thumbDir, { recursive: true });
+    const thumbAssets = await prepareThumbnailAssets(data.thumbnail, themeIndex);
     const thumbSteps = 6;
     for (let s = 0; s < thumbSteps; s++) {
-      const tree = buildReelsThumbnailTree(data.thumbnail, data.topic, data.slides, theme, s, thumbSteps);
+      const tree = buildReelsThumbnailTree(data.thumbnail, data.topic, data.slides, theme, s, thumbSteps, thumbAssets);
       const frameName = `frame_${String(s).padStart(3, "0")}.png`;
       await renderTreeToPngFile(tree, fonts, `${thumbDir}/${frameName}`);
     }
