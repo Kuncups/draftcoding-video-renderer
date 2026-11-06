@@ -263,6 +263,346 @@ function renderCodeWindow(codeStr, fileName = "solution.ts", statusLabel = "PROD
   ]);
 }
 
+// Dedicated Animated Cover Thumbnail Frame Builder for Reels (1080x1920) before Slide 1
+function buildReelsThumbnailTree(thumbnail, topic, slides, theme, stepIndex = 5, totalSteps = 6) {
+  const isBrutalist = theme.id === "neo-brutalist" || theme.id === "creative-agency";
+  const stepRatio = Math.min(1, (stepIndex + 1) / 4);
+  const thumb = thumbnail || {};
+  const category = String(thumb.category || slides?.[0]?.tag || "TECH INSIGHT").toUpperCase();
+  const badgeText = String(thumb.badge || `EXCLUSIVE CASE STUDY • ${theme.name.toUpperCase()}`);
+  const titleTop = String(thumb.title_top || topic || "BEDAH ARSITEKTUR");
+  const highlightWord = String(thumb.highlight || "SKALA PRODUKSI");
+  const titleBottom = String(thumb.title_bottom || slides?.[0]?.headline || "TANPA DRAMA & BOTTLENECK");
+  const subtitle = String(thumb.subtitle || slides?.[0]?.body || "Panduan praktis engineering & desain dari tim @draftcoding.id");
+  const statValue = String(thumb.stat_value || "99.4%");
+  const statLabel = String(thumb.stat_label || "PRODUCTION SCORE");
+  const metrics = Array.isArray(thumb.visual_metrics) && thumb.visual_metrics.length >= 2
+    ? thumb.visual_metrics.slice(0, 2)
+    : [
+        { label: "Performa & Stabilitas", before: "34%", after: "98%" },
+        { label: "Efisiensi Kode & UI", before: "Lambat", after: "Optimal" }
+      ];
+
+  const topMasthead = h("div", {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    borderBottom: `3px solid ${theme.ink}`,
+    paddingBottom: "32px"
+  }, [
+    h("div", { display: "flex", alignItems: "center" }, [
+      h("div", {
+        display: "flex",
+        backgroundColor: theme.ink,
+        color: "#FFFFFF",
+        padding: "12px 24px",
+        borderRadius: "10px",
+        fontFamily: "JetBrains Mono",
+        fontSize: "21px",
+        fontWeight: 700,
+        marginRight: "14px"
+      }, "COVER EDITION"),
+      h("div", {
+        display: "flex",
+        backgroundColor: theme.accentSoft,
+        color: theme.accent,
+        border: `2px solid ${theme.accent}`,
+        padding: "10px 22px",
+        borderRadius: "10px",
+        fontFamily: "JetBrains Mono",
+        fontSize: "21px",
+        fontWeight: 700
+      }, category)
+    ]),
+    h("div", {
+      display: "flex",
+      backgroundColor: theme.secondary,
+      color: theme.secondaryText,
+      border: isBrutalist ? "2px solid #09090B" : "none",
+      boxShadow: isBrutalist ? "4px 4px 0px #09090B" : "none",
+      padding: "10px 24px",
+      borderRadius: "99px",
+      fontFamily: "JetBrains Mono",
+      fontSize: "21px",
+      fontWeight: 700
+    }, "✦ THUMBNAIL // 00")
+  ]);
+
+  const heroSection = h("div", {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    width: "100%",
+    flex: 1,
+    padding: "48px 0px"
+  }, [
+    h("div", { display: "flex", flexDirection: "column", width: "100%" }, [
+      h("div", {
+        display: "flex",
+        alignSelf: "flex-start",
+        backgroundColor: theme.accentSoft,
+        color: theme.accent,
+        padding: "10px 24px",
+        borderRadius: "99px",
+        fontFamily: "JetBrains Mono",
+        fontSize: "21px",
+        fontWeight: 700,
+        marginBottom: "28px"
+      }, `⚡ ${badgeText}`),
+      h("div", {
+        display: "flex",
+        fontFamily: theme.fontDisplay,
+        fontSize: "66px",
+        fontWeight: 800,
+        lineHeight: 1.08,
+        letterSpacing: "-0.03em",
+        color: theme.ink,
+        marginBottom: "18px"
+      }, titleTop.toUpperCase()),
+      h("div", { display: "flex", alignItems: "center", marginBottom: "18px" }, [
+        h("div", {
+          display: "flex",
+          backgroundColor: theme.accent,
+          color: "#FFFFFF",
+          border: isBrutalist ? "3px solid #09090B" : "none",
+          boxShadow: isBrutalist ? "8px 8px 0px #09090B" : "none",
+          padding: "12px 32px",
+          borderRadius: "18px",
+          fontFamily: theme.fontDisplay,
+          fontSize: "70px",
+          fontWeight: 800,
+          lineHeight: 1.08,
+          letterSpacing: "-0.03em",
+          marginRight: "22px"
+        }, highlightWord.toUpperCase()),
+        h("div", {
+          display: "flex",
+          fontFamily: "JetBrains Mono",
+          fontSize: "52px",
+          fontWeight: 700,
+          color: theme.accent
+        }, "↗")
+      ]),
+      h("div", {
+        display: "flex",
+        fontFamily: theme.fontDisplay,
+        fontSize: "58px",
+        fontWeight: 700,
+        lineHeight: 1.14,
+        letterSpacing: "-0.025em",
+        color: theme.ink,
+        marginBottom: "26px"
+      }, titleBottom),
+      h("div", {
+        display: "flex",
+        fontFamily: theme.fontBody,
+        fontSize: "33px",
+        fontWeight: 500,
+        lineHeight: 1.45,
+        color: theme.muted
+      }, subtitle)
+    ]),
+
+    h("div", {
+      display: "flex",
+      flexDirection: "column",
+      backgroundColor: theme.cardBg,
+      border: theme.cardBorder,
+      boxShadow: theme.cardShadow,
+      borderRadius: theme.cardRadius,
+      padding: "42px 44px",
+      width: "100%",
+      boxSizing: "border-box"
+    }, [
+      h("div", {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        borderBottom: "2px solid #E2E8F0",
+        paddingBottom: "22px",
+        marginBottom: "28px",
+        width: "100%"
+      }, [
+        h("div", { display: "flex", alignItems: "center" }, [
+          h("div", { width: "14px", height: "14px", borderRadius: "99px", backgroundColor: "#FB7185", marginRight: "8px" }, ""),
+          h("div", { width: "14px", height: "14px", borderRadius: "99px", backgroundColor: "#FACC15", marginRight: "8px" }, ""),
+          h("div", { width: "14px", height: "14px", borderRadius: "99px", backgroundColor: "#34D399", marginRight: "16px" }, ""),
+          h("div", {
+            display: "flex",
+            fontFamily: "JetBrains Mono",
+            fontSize: "20px",
+            fontWeight: 700,
+            color: theme.ink
+          }, `TOPIC PREVIEW // ${String(topic || "").toUpperCase().slice(0, 26)}`)
+        ]),
+        h("div", {
+          display: "flex",
+          backgroundColor: theme.solBg,
+          color: theme.solColor,
+          padding: "8px 18px",
+          borderRadius: "99px",
+          fontFamily: "JetBrains Mono",
+          fontSize: "18px",
+          fontWeight: 700
+        }, "● VERIFIED")
+      ]),
+      h("div", {
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        marginBottom: "24px"
+      }, metrics.map((m, idx) =>
+        h("div", {
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: "#FFFFFF",
+          border: "2px solid #E2E8F0",
+          borderRadius: "18px",
+          padding: "22px 26px",
+          marginBottom: idx === 0 ? "16px" : "0px",
+          width: "100%",
+          boxSizing: "border-box"
+        }, [
+          h("div", {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            width: "100%",
+            marginBottom: "12px"
+          }, [
+            h("div", {
+              display: "flex",
+              fontFamily: theme.fontBody,
+              fontSize: "24px",
+              fontWeight: 700,
+              color: theme.ink
+            }, String(m.label)),
+            h("div", { display: "flex", alignItems: "center" }, [
+              h("div", {
+                display: "flex",
+                backgroundColor: theme.probBg,
+                color: theme.probColor,
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontFamily: "JetBrains Mono",
+                fontSize: "19px",
+                fontWeight: 700,
+                marginRight: "12px"
+              }, `❌ ${m.before}`),
+              h("div", {
+                display: "flex",
+                backgroundColor: theme.solBg,
+                color: theme.solColor,
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontFamily: "JetBrains Mono",
+                fontSize: "19px",
+                fontWeight: 700
+              }, `✅ ${m.after}`)
+            ])
+          ]),
+          h("div", {
+            display: "flex",
+            width: "100%",
+            height: "12px",
+            backgroundColor: "#E2E8F0",
+            borderRadius: "99px",
+            overflow: "hidden"
+          }, [
+            h("div", {
+              width: `${Math.round((idx === 0 ? 94 : 88) * stepRatio)}%`,
+              height: "12px",
+              backgroundColor: theme.accent,
+              borderRadius: "99px"
+            }, "")
+          ])
+        ])
+      )),
+      h("div", {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        width: "100%",
+        backgroundColor: theme.codeBg,
+        color: "#FFFFFF",
+        borderRadius: "18px",
+        padding: "24px 32px",
+        boxSizing: "border-box"
+      }, [
+        h("div", {
+          display: "flex",
+          fontFamily: "JetBrains Mono",
+          fontSize: "22px",
+          fontWeight: 700,
+          color: "#94A3B8"
+        }, `BENCHMARK // ${statLabel}`),
+        h("div", {
+          display: "flex",
+          fontFamily: "JetBrains Mono",
+          fontSize: "40px",
+          fontWeight: 700,
+          color: "#34D399"
+        }, statValue)
+      ])
+    ])
+  ]);
+
+  const footer = h("div", {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    borderTop: "2px solid #E2E8F0",
+    paddingTop: "32px"
+  }, [
+    h("div", { display: "flex", alignItems: "center" }, [
+      h("div", {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        width: "60px",
+        height: "60px",
+        borderRadius: "14px",
+        backgroundColor: theme.accent,
+        color: "#FFFFFF",
+        fontFamily: "JetBrains Mono",
+        fontSize: "26px",
+        fontWeight: 700,
+        marginRight: "20px"
+      }, "DC"),
+      h("div", { display: "flex", flexDirection: "column" }, [
+        h("div", { display: "flex", fontFamily: theme.fontDisplay, fontSize: "28px", fontWeight: 700, color: theme.ink }, "@draftcoding.id"),
+        h("div", { display: "flex", fontFamily: "JetBrains Mono", fontSize: "20px", fontWeight: 500, color: theme.muted }, "WEB • ANDROID • UI/UX • ARDUINO")
+      ])
+    ]),
+    h("div", {
+      display: "flex",
+      backgroundColor: theme.accent,
+      color: "#FFFFFF",
+      padding: "14px 28px",
+      borderRadius: "99px",
+      fontFamily: "JetBrains Mono",
+      fontSize: "22px",
+      fontWeight: 700
+    }, "MULAI SLIDE 01 ➔")
+  ]);
+
+  return h("div", {
+    width: "1080px",
+    height: "1920px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    color: theme.ink,
+    fontFamily: theme.fontBody,
+    padding: "115px 72px 125px 72px",
+    border: `12px solid ${theme.canvasGrid}`,
+    boxSizing: "border-box"
+  }, [topMasthead, heroSection, footer]);
+}
+
 // Animated Frame Builder for Reels Format A (Kinetic Slide Entrance & Micro-Motion)
 function buildAnimatedReelsSlideTree(slide, totalSlides = 4, theme, stepIndex = 7, totalSteps = 8) {
   const slideNum = slide.slide_num || 1;
@@ -993,6 +1333,21 @@ async function main() {
 
   // 1. Render Format A: Kinetic Animated Slide Reels + Dynamic Multi-Transitions
   if (videoMode === "all" || videoMode === "a") {
+    // 0. Render Cover Thumbnail Clip first (2.2s at 30fps)
+    const thumbDir = "/tmp/reels_a_thumb";
+    fs.mkdirSync(thumbDir, { recursive: true });
+    const thumbSteps = 6;
+    for (let s = 0; s < thumbSteps; s++) {
+      const tree = buildReelsThumbnailTree(data.thumbnail, data.topic, data.slides, theme, s, thumbSteps);
+      const frameName = `frame_${String(s).padStart(3, "0")}.png`;
+      await renderTreeToPngFile(tree, fonts, `${thumbDir}/${frameName}`);
+    }
+    execSync(
+      `ffmpeg -y -framerate 2.7 -i ${thumbDir}/frame_%03d.png ` +
+      `-c:v libx264 -preset fast -crf 18 -r 30 -pix_fmt yuv420p -t 2.4 /tmp/clip_thumb.mp4`,
+      { stdio: "inherit" }
+    );
+
     const stepsPerSlide = 8; // 8 frames at 2.5fps = 3.2s per slide clip
     for (let i = 0; i < data.slides.length; i++) {
       const slideDir = `/tmp/reels_a_s${i}`;
@@ -1005,24 +1360,25 @@ async function main() {
         await renderTreeToPngFile(tree, fonts, `${slideDir}/${frameName}`);
       }
 
-      // Encode animated slide clip (3.5s at 30fps)
+      // Encode animated slide clip (3.2s at 30fps)
       execSync(
-        `ffmpeg -y -framerate 2.3 -i ${slideDir}/frame_%03d.png ` +
-        `-c:v libx264 -preset fast -crf 18 -r 30 -pix_fmt yuv420p -t 3.5 /tmp/clip_${i}.mp4`,
+        `ffmpeg -y -framerate 2.5 -i ${slideDir}/frame_%03d.png ` +
+        `-c:v libx264 -preset fast -crf 18 -r 30 -pix_fmt yuv420p -t 3.2 /tmp/clip_${i}.mp4`,
         { stdio: "inherit" }
       );
     }
 
-    // Join the 4 animated slide clips with dynamic Dribbble-style transitions
+    // Join Thumbnail + 4 animated slide clips with dynamic transitions
     execSync(
       `ffmpeg -y ` +
-      `-i /tmp/clip_0.mp4 -i /tmp/clip_1.mp4 -i /tmp/clip_2.mp4 -i /tmp/clip_3.mp4 ` +
-      `-f lavfi -t 12.8 -i anullsrc=channel_layout=stereo:sample_rate=44100 ` +
+      `-i /tmp/clip_thumb.mp4 -i /tmp/clip_0.mp4 -i /tmp/clip_1.mp4 -i /tmp/clip_2.mp4 -i /tmp/clip_3.mp4 ` +
+      `-f lavfi -t 14.5 -i anullsrc=channel_layout=stereo:sample_rate=44100 ` +
       `-filter_complex "` +
-      `[0:v][1:v]xfade=transition=smoothleft:duration=0.45:offset=3.05[v01];` +
-      `[v01][2:v]xfade=transition=circleopen:duration=0.45:offset=6.10[v02];` +
-      `[v02][3:v]xfade=transition=wipeup:duration=0.45:offset=9.15,format=yuv420p[vout]" ` +
-      `-map "[vout]" -map 4:a -c:v libx264 -preset fast -crf 18 -r 30 -c:a aac -shortest /tmp/reels_format_A.mp4`,
+      `[0:v][1:v]xfade=transition=fade:duration=0.4:offset=2.0[v01];` +
+      `[v01][2:v]xfade=transition=smoothleft:duration=0.4:offset=4.8[v02];` +
+      `[v02][3:v]xfade=transition=circleopen:duration=0.4:offset=7.6[v03];` +
+      `[v03][4:v]xfade=transition=wipeup:duration=0.4:offset=10.4,format=yuv420p[vout]" ` +
+      `-map "[vout]" -map 5:a -c:v libx264 -preset fast -crf 18 -r 30 -c:a aac -shortest /tmp/reels_format_A.mp4`,
       { stdio: "inherit" }
     );
 
